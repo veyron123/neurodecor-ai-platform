@@ -1,0 +1,36 @@
+{
+  "name": "neurodecor",
+  "version": "1.0.0",
+  "description": "AI-powered interior design transformation platform",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build:backend": "cd backend && npm install",
+    "start": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test -- --watchAll=false",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && npm install", 
+    "install:frontend": "cd frontend && npm install",
+    "deploy:check": "node deploy-check.js",
+    "deploy:prepare": "npm run install:all && npm run test && npm run deploy:check"
+  },
+  "keywords": [
+    "ai",
+    "interior-design", 
+    "image-transformation",
+    "react",
+    "nodejs",
+    "firebase"
+  ],
+  "author": "NeuroDecor Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}

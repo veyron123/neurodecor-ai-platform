@@ -1,0 +1,110 @@
+.marketing-section {
+  padding: 80px 0;
+  text-align: center;
+}
+
+.marketing-section h2 {
+  font-size: 2.8em;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+}
+
+.marketing-section .section-subtitle {
+  font-size: 1.1em;
+  color: #4a5568;
+  max-width: 700px;
+  margin: 0 auto 50px auto;
+  line-height: 1.7;
+}
+
+.marketing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.marketing-card {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  text-align: left;
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  margin-right: 20px;
+  flex-shrink: 0;
+}
+
+.card-content h3 {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.card-content p {
+  color: #4a5568;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .marketing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cta-section {
+  margin-top: 60px;
+}
+
+.cta-button, .cta-button-secondary {
+  display: inline-block;
+  padding: 15px 35px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 600;
+  text-decoration: none;
+  margin: 0 10px;
+  transition: background-color 0.3s ease;
+}
+
+.cta-button {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.cta-button:hover {
+  background-color: #2563eb;
+}
+
+.cta-button-secondary {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.cta-button-secondary:hover {
+  background-color: #d1d5db;
+}
+
+.trusted-by-text {
+  margin-top: 40px;
+  color: #6b7280;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.client-logos {
+  margin-top: 20px;
+  max-width: 100%;
+  height: auto;
+  opacity: 0.6;
+}

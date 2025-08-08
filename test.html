@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Design AI - Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f8fafc;
+            color: #1a202c;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background-color: #f0f9ff;
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            color: #9ca3af;
+            margin-bottom: 10px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .selection-btn {
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 0.95em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            text-align: left;
+            color: #374151;
+        }
+
+        .selection-btn:hover:not(.disabled) {
+            border-color: #d1d5db;
+            background-color: #f9fafb;
+        }
+
+        .selection-btn.selected {
+            background-color: #1f2937;
+            border-color: #1f2937;
+            color: white;
+        }
+
+        .selection-btn.disabled {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+            cursor: not-allowed;
+            border-color: #e5e7eb;
+        }
+
+        .transform-btn {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+            background-color: #e5e7eb;
+            color: #9ca3af;
+        }
+
+        .transform-btn.enabled {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .images-section {
+            background-color: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            height: fit-content;
+        }
+
+        .image-tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            background-color: transparent;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+            background-color: white;
+        }
+
+        .image-display {
+            padding: 20px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #9ca3af;
+            position: relative;
+        }
+
+        .image-placeholder {
+            font-size: 4em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .download-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background-color: #1f2937;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .download-btn:hover {
+            background-color: #374151;
+        }
+
+        .download-btn.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* --- Image Compare Styles --- */
+        .img-comp-container {
+            position: relative;
+            height: 400px; /* Adjust as needed */
+            display: none; /* Hidden by default */
+        }
+
+        .img-comp-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .img-comp-img img {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .img-comp-slider {
+            position: absolute;
+            z-index: 9;
+            cursor: ew-resize;
+            width: 2px;
+            height: 100%;
+            background-color: white;
+            top: 0;
+            left: 50%;
+        }
+        
+        .img-comp-slider:before {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5l-10 7 10 7V5z"></path><path d="M7 5l10 7-10 7V5z"></path></svg>');
+            background-color: #3b82f6;
+            background-repeat: no-repeat;
+            background-position: center;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .button-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Don't Take Our Word For It. Try It For Free Below!</h1>
+            <p>Upload a photo, select a room type, and see your space transformed</p>
+        </div>
+
+        <div class="main-content">
+            <div class="controls-section">
+                <!-- Upload Section -->
+                <div class="upload-section">
+                    <h3 class="section-title">Upload Image</h3>
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">⬆</div>
+                        <p>Drag and drop or click to upload</p>
+                        <span>(JPG, PNG)</span>
+                        <input type="file" id="fileInput" accept="image/jpeg,image/png" style="display: none;" onchange="handleFileSelect(event)">
+                    </div>
+                </div>
+
+                <!-- Room Type Section -->
+                <div class="selection-section">
+                    <h3 class="section-title">Room Type</h3>
+                    <div class="button-grid">
+                        <button class="selection-btn selected" onclick="selectRoomType('bedroom', this)">
+                            Bedroom ✓
+                        </button>
+                        <button class="selection-btn" onclick="selectRoomType('living-room', this)">
+                            Living Room
+                        </button>
+                        <button class="selection-btn" onclick="selectRoomType('kitchen', this)">
+                            Kitchen
+                        </button>
+                        <button class="selection-btn" onclick="selectRoomType('dining-room', this)">
+                            Dining Room
+                        </button>
+                        <button class="selection-btn" onclick="selectRoomType('bathroom', this)">
+                            Bathroom
+                        </button>
+                        <button class="selection-btn" onclick="selectRoomType('home-office', this)">
+                            Home Office
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Furniture Style Section -->
+                <div class="selection-section">
+                    <h3 class="section-title">Furniture Style</h3>
+                    <div class="button-grid">
+                        <button class="selection-btn selected" onclick="selectFurnitureStyle('scandinavian', this)">
+                            Scandinavian ✓
+                        </button>
+                        <button class="selection-btn" onclick="selectFurnitureStyle('modern', this)">
+                            Modern
+                        </button>
+                        <button class="selection-btn" onclick="selectFurnitureStyle('minimalist', this)">
+                            Minimalist
+                        </button>
+                        <button class="selection-btn" onclick="selectFurnitureStyle('coastal', this)">
+                            Coastal
+                        </button>
+                        <button class="selection-btn" onclick="selectFurnitureStyle('industrial', this)">
+                            Industrial
+                        </button>
+                        <button class="selection-btn" onclick="selectFurnitureStyle('traditional', this)">
+                            Traditional
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transform Button -->
+                <button class="transform-btn" id="transformBtn" onclick="transformRoom()">
+                    Transform Room
+                </button>
+            </div>
+
+            <!-- Image Display Section -->
+            <div class="images-section">
+                <div class="image-tabs">
+                    <button id="originalTab" class="tab active" onclick="switchTab('original')">Original</button>
+                    <button id="stagedTab" class="tab" onclick="switchTab('staged')">Staged</button>
+                    <button id="compareTab" class="tab" onclick="switchTab('compare')" style="display: none;">Compare</button>
+                </div>
+                
+                <div class="image-display" id="singleImageView">
+                    <div id="placeholder">
+                        <div class="image-placeholder">🖼</div>
+                        <p>Upload an image to see it here</p>
+                    </div>
+                    <img id="mainImage" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); display: none;">
+                    <button id="downloadBtn" class="download-btn" onclick="downloadImage()">⤓</button>
+                </div>
+
+                <div class="img-comp-container" id="compareView">
+                    <div class="img-comp-img">
+                        <img id="compareImgBefore">
+                    </div>
+                    <div class="img-comp-img img-comp-overlay" id="compareOverlay">
+                        <img id="compareImgAfter">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let selectedRoomType = 'bedroom';
+        let selectedFurnitureStyle = 'scandinavian';
+        let originalImageUrl = null;
+        let stagedImageUrl = null;
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && (file.type === 'image/jpeg' || file.type === 'image/png')) {
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    originalImageUrl = e.target.result;
+                    stagedImageUrl = null; 
+                    
+                    document.getElementById('compareTab').style.display = 'none';
+                    document.getElementById('downloadBtn').classList.remove('visible');
+                    
+                    switchTab('original');
+                };
+                reader.readAsDataURL(file);
+                updateTransformButton();
+            } else {
+                alert('Пожалуйста, загрузите изображение в формате JPG или PNG');
+            }
+        }
+
+        function displaySingleImage(url) {
+            const mainImage = document.getElementById('mainImage');
+            const placeholder = document.getElementById('placeholder');
+            if (url) {
+                mainImage.src = url;
+                mainImage.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                mainImage.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            const singleImageView = document.getElementById('singleImageView');
+            const compareView = document.getElementById('compareView');
+
+            if (tabName === 'original' || tabName === 'staged') {
+                singleImageView.style.display = 'flex';
+                compareView.style.display = 'none';
+                const imageUrl = tabName === 'original' ? originalImageUrl : stagedImageUrl;
+                displaySingleImage(imageUrl);
+            } else if (tabName === 'compare') {
+                singleImageView.style.display = 'none';
+                compareView.style.display = 'block';
+                initCompare();
+            }
+            updateDownloadButtonVisibility();
+        }
+
+        function updateDownloadButtonVisibility() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (stagedImageUrl && document.getElementById('stagedTab').classList.contains('active')) {
+                downloadBtn.classList.add('visible');
+            } else {
+                downloadBtn.classList.remove('visible');
+            }
+        }
+        
+        function downloadImage() {
+            if (!stagedImageUrl) return;
+            const a = document.createElement('a');
+            a.href = stagedImageUrl;
+            a.download = 'transformed_room.png';
+            document.body.appendChild(a);
+a.click();
+            document.body.removeChild(a);
+        }
+
+        function selectRoomType(type, element) {
+            if (element.classList.contains('disabled')) return;
+            
+            document.querySelectorAll('.selection-section:nth-child(2) .selection-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.innerHTML = btn.innerHTML.replace(' ✓', '');
+            });
+            
+            element.classList.add('selected');
+            element.innerHTML += ' ✓';
+            selectedRoomType = type;
+            updateTransformButton();
+        }
+
+        function selectFurnitureStyle(style, element) {
+            if (element.classList.contains('disabled')) return;
+            
+            document.querySelectorAll('.selection-section:nth-child(3) .selection-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.innerHTML = btn.innerHTML.replace(' ✓', '');
+            });
+            
+            element.classList.add('selected');
+            element.innerHTML += ' ✓';
+            selectedFurnitureStyle = style;
+            updateTransformButton();
+        }
+
+        function updateTransformButton() {
+            const transformBtn = document.getElementById('transformBtn');
+            if (selectedFile && selectedRoomType && selectedFurnitureStyle) {
+                transformBtn.classList.add('enabled');
+                transformBtn.style.cursor = 'pointer';
+            } else {
+                transformBtn.classList.remove('enabled');
+                transformBtn.style.cursor = 'not-allowed';
+            }
+        }
+
+        async function transformRoom() {
+            if (!selectedFile || !selectedRoomType || !selectedFurnitureStyle) {
+                return;
+            }
+
+            const transformBtn = document.getElementById('transformBtn');
+            transformBtn.innerHTML = 'Transforming...';
+            transformBtn.style.cursor = 'not-allowed';
+
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+            formData.append('roomType', selectedRoomType);
+            formData.append('furnitureStyle', selectedFurnitureStyle);
+
+            try {
+                const response = await fetch('http://localhost:3001/transform', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    stagedImageUrl = URL.createObjectURL(blob);
+                    document.getElementById('compareTab').style.display = 'block';
+                    switchTab('staged');
+                } else {
+                    alert('Ошибка при обработке изображения');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ошибка подключения к серверу. Убедитесь, что backend запущен на http://localhost:3001');
+            } finally {
+                transformBtn.innerHTML = 'Transform Room';
+                updateTransformButton();
+            }
+        }
+
+        function initCompare() {
+            const container = document.getElementById("compareView");
+            if (!container || !originalImageUrl || !stagedImageUrl) return;
+
+            container.innerHTML = ''; // Clear previous
+
+            const beforeImg = document.createElement('img');
+            beforeImg.src = originalImageUrl;
+
+            const afterImg = document.createElement('img');
+            afterImg.src = stagedImageUrl;
+
+            const beforeWrapper = document.createElement('div');
+            beforeWrapper.className = 'img-comp-img';
+            beforeWrapper.appendChild(beforeImg);
+
+            const afterWrapper = document.createElement('div');
+            afterWrapper.className = 'img-comp-img img-comp-overlay';
+            afterWrapper.appendChild(afterImg);
+
+            container.appendChild(beforeWrapper);
+            container.appendChild(afterWrapper);
+
+            const setupSlider = () => {
+                let clicked = 0;
+                const w = container.offsetWidth;
+                
+                afterWrapper.style.width = (w / 2) + "px";
+
+                const slider = document.createElement("DIV");
+                slider.setAttribute("class", "img-comp-slider");
+                container.appendChild(slider);
+                slider.style.left = (w / 2) - (slider.offsetWidth / 2) + "px";
+
+                slider.addEventListener("mousedown", slideReady);
+                window.addEventListener("mouseup", slideFinish);
+                slider.addEventListener("touchstart", slideReady, { passive: true });
+                window.addEventListener("touchend", slideFinish, { passive: true });
+
+                function slideReady(e) {
+                    e.preventDefault();
+                    clicked = 1;
+                    window.addEventListener("mousemove", slideMove);
+                    window.addEventListener("touchmove", slideMove, { passive: true });
+                }
+
+                function slideFinish() {
+                    clicked = 0;
+                    window.removeEventListener("mousemove", slideMove);
+                    window.removeEventListener("touchmove", slideMove);
+                }
+
+                function slideMove(e) {
+                    let pos;
+                    if (clicked == 0) return false;
+                    pos = getCursorPos(e);
+                    if (pos < 0) pos = 0;
+                    if (pos > w) pos = w;
+                    slide(pos);
+                }
+
+                function getCursorPos(e) {
+                    let a, x = 0;
+                    e = (e.changedTouches) ? e.changedTouches[0] : e;
+                    a = container.getBoundingClientRect();
+                    x = e.pageX - a.left;
+                    x = x - window.pageXOffset;
+                    return x;
+                }
+
+                function slide(x) {
+                    afterWrapper.style.width = x + "px";
+                    slider.style.left = afterWrapper.offsetWidth - (slider.offsetWidth / 2) + "px";
+                }
+            };
+
+            // Handle cached images: if already loaded, setup immediately.
+            // Otherwise, wait for the onload event.
+            if (afterImg.complete) {
+                setupSlider();
+            } else {
+                afterImg.onload = setupSlider;
+            }
+        }
+
+        // Initialize
+        updateTransformButton();
+    </script>
+</body>
+</html>

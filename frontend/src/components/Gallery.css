@@ -1,0 +1,121 @@
+.gallery-section {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.gallery-subtitle {
+  color: #6b7280;
+  font-size: 0.9em;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.gallery-title {
+  font-size: 2.8em;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 40px;
+}
+
+.gallery-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  position: relative;
+}
+
+.room-tabs {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  background-color: rgba(255,255,255,0.8);
+  border-radius: 12px;
+  padding: 5px;
+  z-index: 10;
+}
+
+.room-tab {
+  padding: 10px 20px;
+  border: none;
+  background-color: transparent;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.room-tab.active {
+  background-color: #1f2937;
+  color: white;
+}
+
+.gallery-image img {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.style-tabs {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  background-color: rgba(255,255,255,0.8);
+  border-radius: 12px;
+  padding: 5px;
+  z-index: 10;
+}
+
+.style-tab {
+  padding: 10px 20px;
+  border: none;
+  background-color: transparent;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.style-tab.active {
+  background-color: #1f2937;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .gallery-title {
+    font-size: 2em;
+  }
+
+  .room-tabs, .style-tabs {
+    position: static;
+    transform: none;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .room-tabs::-webkit-scrollbar, .style-tabs::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
+
+  .room-tabs {
+    margin-bottom: 20px;
+  }
+
+  .style-tabs {
+    margin-top: 20px;
+  }
+
+  .room-tab, .style-tab {
+    white-space: nowrap;
+  }
+}

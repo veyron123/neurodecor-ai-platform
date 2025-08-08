@@ -1,0 +1,39 @@
+.sitemap-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 40px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: #333;
+}
+
+.sitemap-container h1 {
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+  color: #1a1a1a;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.sitemap-container ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sitemap-container li {
+  margin-bottom: 15px;
+}
+
+.sitemap-container a {
+  font-size: 1.2rem;
+  color: #3b82f6;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sitemap-container a:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://www.neurodecor.site/en</loc>
+    <xhtml:link 
+               rel="alternate"
+               hreflang="uk"
+               href="https://www.neurodecor.site/uk"/>
+    <xhtml:link 
+               rel="alternate"
+               hreflang="en"
+               href="https://www.neurodecor.site/en"/>
+    <lastmod>2025-06-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Terms of Service -->
+  <url>
+    <loc>https://www.neurodecor.site/en/terms</loc>
+    <xhtml:link 
+               rel="alternate"
+               hreflang="uk"
+               href="https://www.neurodecor.site/uk/terms"/>
+    <xhtml:link 
+               rel="alternate"
+               hreflang="en"
+               href="https://www.neurodecor.site/en/terms"/>
+    <lastmod>2025-06-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://www.neurodecor.site/en/privacy</loc>
+    <xhtml:link 
+               rel="alternate"
+               hreflang="uk"
+               href="https://www.neurodecor.site/uk/privacy"/>
+    <xhtml:link 
+               rel="alternate"
+               hreflang="en"
+               href="https://www.neurodecor.site/en/privacy"/>
+    <lastmod>2025-06-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+</urlset>
