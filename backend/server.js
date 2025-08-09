@@ -7,17 +7,38 @@ const admin = require('firebase-admin');
 const crypto = require('crypto');
 
 // Firebase initialization
-let serviceAccount;
+let db;
 if (process.env.FIREBASE_ADMIN_KEY) {
   // Production: use environment variable
-  serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_KEY);
+  const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_KEY);
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  db = admin.firestore();
+  console.log('✅ Firebase initialized with environment variable');
 } else {
-  // Development: use local file
-  serviceAccount = require('./serviceAccountKey.json');
+  try {
+    // Development: use local file
+    const serviceAccount = require('./serviceAccountKey.json');
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    db = admin.firestore();
+    console.log('✅ Firebase initialized with local file');
+  } catch (error) {
+    console.log('⚠️ Firebase not initialized - no serviceAccountKey.json found');
+    console.log('Authentication and payments will work in demo mode');
+    // Mock db object to prevent crashes
+    db = { 
+      collection: () => ({ 
+        doc: () => ({ 
+          update: () => Promise.resolve(), 
+          collection: () => ({ 
+            doc: () => ({ 
+              set: () => Promise.resolve() 
+            }) 
+          }) 
+        }) 
+      }) 
+    };
+  }
 }
-
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-const db = admin.firestore();
 
 // Products configuration
 const PRODUCTS = {
