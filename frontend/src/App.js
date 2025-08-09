@@ -24,7 +24,6 @@ const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const Sitemap = lazy(() => import('./components/Sitemap'));
 
 const HomePage = ({ handleOpenModal, credits, deductCredit }) => {
-  const { t } = useTranslation();
   const { lang } = useParams();
 
   useEffect(() => {

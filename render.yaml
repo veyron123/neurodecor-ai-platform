@@ -33,7 +33,7 @@ services:
     name: neurodecor-frontend
     env: static
     plan: free
-    buildCommand: cd frontend && npm install --legacy-peer-deps && npm run build
+    buildCommand: cd frontend && npm install --legacy-peer-deps --force && npm run build
     staticPublishPath: ./frontend/build
     routes:
       - type: rewrite
