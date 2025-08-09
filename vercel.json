@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/build",
+  "buildCommand": "cd frontend && npm install && npm run build && cp -r frontend/build ./build",
+  "outputDirectory": "build",
   "builds": [
     {
       "src": "backend/server.js",
