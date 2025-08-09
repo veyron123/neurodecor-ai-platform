@@ -253,6 +253,11 @@ app.get('/', (req, res) => {
   });
 });
 
+// Favicon endpoint (prevents 404 in logs)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
 // Enhanced health check for Render
 app.get('/health', (req, res) => {
   const health = {
