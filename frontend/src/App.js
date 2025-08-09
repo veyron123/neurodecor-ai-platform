@@ -14,7 +14,6 @@ import Pricing from './components/Pricing';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
 import { useTranslation } from 'react-i18next';
-import { Helmet } from 'react-helmet-async';
 import i18n from './i18n';
 
 const LoginModal = lazy(() => import('./components/LoginModal'));
@@ -37,13 +36,6 @@ const HomePage = ({ handleOpenModal, credits, deductCredit }) => {
 
   return (
     <>
-      <Helmet>
-        <title>{t('home_design_ai')}</title>
-        <meta name="description" content={t('meta_description')} />
-        <link rel="alternate" hrefLang="en" href={`https://neurodecor.site/en`} />
-        <link rel="alternate" hrefLang="uk" href={`https://neurodecor.site/uk`} />
-        <link rel="alternate" hrefLang="x-default" href={`https://neurodecor.site/en`} />
-      </Helmet>
       <div className="main-container">
         <HeroSlider />
         <HowItWorks />
