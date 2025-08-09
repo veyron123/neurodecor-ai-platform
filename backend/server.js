@@ -237,6 +237,22 @@ app.post('/api/payment-callback', async (req, res) => {
     }
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'NeuroDecor AI Platform Backend',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      transform: '/api/transform-room',
+      payment: '/api/process-payment',
+      callback: '/api/payment-callback'
+    },
+    docs: 'https://github.com/veyron123/neurodecor-ai-platform'
+  });
+});
+
 // Enhanced health check for Render
 app.get('/health', (req, res) => {
   const health = {
