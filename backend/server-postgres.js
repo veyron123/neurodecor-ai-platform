@@ -281,23 +281,57 @@ app.post('/api/create-payment', auth.requireAuth, async (req, res) => {
 app.post('/api/payment-callback', async (req, res) => {
     console.log('💳 PAYMENT CALLBACK RECEIVED:', Date.now());
     console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 Request headers:', JSON.stringify(req.headers, null, 2));
     
-    const bodyKey = Object.keys(req.body)[0];
-    if (!bodyKey) {
-        console.error('❌ No body key found in callback');
-        return res.status(400).json({ error: 'Invalid callback format' });
-    }
-
-    try {
-        const data = JSON.parse(bodyKey);
-        console.log('📊 Parsed callback data:', JSON.stringify(data, null, 2));
-        
-        const { orderReference, transactionStatus, amount } = data;
-        
-        if (!orderReference) {
-            console.error('❌ No order reference in callback');
-            return res.status(400).json({ error: 'Invalid payment data' });
+    let data;
+    
+    // Handle different callback formats
+    if (req.headers['content-type']?.includes('application/json')) {
+        // JSON format
+        data = req.body;
+        console.log('📊 JSON callback data:', JSON.stringify(data, null, 2));
+    } else {
+        // Form-encoded format (WayForPay standard)
+        // Check if data is in req.body directly
+        if (req.body.orderReference || req.body.transactionStatus) {
+            data = req.body;
+            console.log('📊 Form-encoded callback data:', JSON.stringify(data, null, 2));
+        } else {
+            // Try to parse first key as JSON (old format)
+            const bodyKey = Object.keys(req.body)[0];
+            if (!bodyKey) {
+                console.error('❌ No data found in callback');
+                return res.status(400).json({ error: 'Invalid callback format' });
+            }
+            
+            try {
+                data = JSON.parse(bodyKey);
+                console.log('📊 Parsed JSON from key:', JSON.stringify(data, null, 2));
+            } catch (parseError) {
+                console.error('❌ Failed to parse callback data:', parseError.message);
+                console.log('🔍 Raw body keys:', Object.keys(req.body));
+                return res.status(400).json({ error: 'Invalid JSON data' });
+            }
         }
+    }
+        
+    // Handle different field names that WayForPay might use
+    const orderReference = data.orderReference || data.order_reference || data.orderRef;
+    const transactionStatus = data.transactionStatus || data.transaction_status || data.reasonCode;
+    const amount = data.amount || data.sum;
+    
+    console.log('🔍 Extracted data:', {
+        orderReference,
+        transactionStatus, 
+        amount,
+        allFields: Object.keys(data)
+    });
+        
+    if (!orderReference) {
+        console.error('❌ No order reference in callback');
+        console.log('🔍 Available fields:', Object.keys(data));
+        return res.status(400).json({ error: 'Invalid payment data' });
+    }
 
         // Find transaction in database
         const transaction = await db.queryOne(
@@ -312,7 +346,10 @@ app.post('/api/payment-callback', async (req, res) => {
 
         console.log('📋 Found transaction:', transaction);
 
-        if (transactionStatus === 'Approved') {
+        // Check for successful payment status (WayForPay uses different statuses)
+        const isSuccessful = ['Approved', 'approved', 'APPROVED', '1'].includes(transactionStatus);
+        
+        if (isSuccessful) {
             console.log('✅ Payment approved, processing...');
             
             try {
@@ -369,10 +406,6 @@ app.post('/api/payment-callback', async (req, res) => {
             
             res.status(200).send('Callback received');
         }
-    } catch (parseError) {
-        console.error('❌ Error parsing callback data:', parseError);
-        res.status(400).json({ error: 'Invalid JSON data' });
-    }
 });
 
 // ========== IMAGE TRANSFORMATION ==========
@@ -480,6 +513,21 @@ app.post('/transform', auth.requireAuth, upload.single('image'), async (req, res
 });
 
 // ========== DEBUG ENDPOINTS ==========
+
+// Test callback endpoint with different formats
+app.post('/api/test-callback', async (req, res) => {
+    console.log('🧪 TEST CALLBACK RECEIVED:', Date.now());
+    console.log('📋 Test body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 Test headers:', JSON.stringify(req.headers, null, 2));
+    console.log('🔍 Body keys:', Object.keys(req.body));
+    
+    res.json({
+        success: true,
+        receivedData: req.body,
+        headers: req.headers,
+        contentType: req.headers['content-type']
+    });
+});
 
 // Manual payment processing endpoint (for debugging)
 app.post('/api/manual-complete-payment', async (req, res) => {
