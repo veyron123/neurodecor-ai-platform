@@ -203,39 +203,133 @@ app.post('/api/create-payment', (req, res) => {
 
 // Payment callback endpoint
 app.post('/api/payment-callback', async (req, res) => {
+    console.log('💳 PAYMENT CALLBACK RECEIVED:', Date.now());
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 Request headers:', JSON.stringify(req.headers, null, 2));
+    
     const bodyKey = Object.keys(req.body)[0];
-    if (!bodyKey) return res.status(400).json({ error: 'Invalid callback format' });
-    
-    const data = JSON.parse(bodyKey);
-    const { orderReference, transactionStatus, amount } = data;
-    const [, productId, userId] = orderReference.split('-');
-    
-    if (!orderReference || !userId || !PRODUCTS[productId]) {
-        return res.status(400).json({ error: 'Invalid payment data' });
+    if (!bodyKey) {
+        console.error('❌ No body key found in callback');
+        return res.status(400).json({ error: 'Invalid callback format' });
     }
-
-    if (transactionStatus === 'Approved') {
-        try {
-            const creditsToAdd = PRODUCTS[productId].credits;
-            const userRef = db.collection('users').doc(userId);
-            
-            await userRef.update({ credits: admin.firestore.FieldValue.increment(creditsToAdd) });
-            await userRef.collection('transactions').doc(orderReference).set({
-                status: 'completed', amount: Number(amount), creditsAdded: creditsToAdd,
-                createdAt: new Date(), paymentSystem: 'WayForPay'
-            });
-
-            const responseTime = Math.floor(Date.now() / 1000);
-            const signature = crypto.createHmac('md5', process.env.WAYFORPAY_MERCHANT_SECRET_KEY)
-                .update(`${orderReference};accept;${responseTime}`).digest('hex');
-
-            res.json({ orderReference, status: 'accept', time: responseTime, signature });
-        } catch (error) {
-            console.error('Payment processing error:', error);
-            res.status(500).json({ error: 'Payment processing failed' });
+    
+    console.log('🔑 Body key:', bodyKey);
+    
+    try {
+        const data = JSON.parse(bodyKey);
+        console.log('📊 Parsed callback data:', JSON.stringify(data, null, 2));
+        
+        const { orderReference, transactionStatus, amount } = data;
+        const orderParts = orderReference.split('-');
+        const [, productId, userId] = orderParts;
+        
+        console.log('📋 Payment details:', { orderReference, transactionStatus, amount, productId, userId });
+        
+        if (!orderReference || !userId || !PRODUCTS[productId]) {
+            console.error('❌ Invalid payment data:', { orderReference, userId, productId, productExists: !!PRODUCTS[productId] });
+            return res.status(400).json({ error: 'Invalid payment data' });
         }
-    } else {
-        res.status(200).send('Callback received');
+
+        if (transactionStatus === 'Approved') {
+            console.log('✅ Payment approved, processing...');
+            try {
+                const creditsToAdd = PRODUCTS[productId].credits;
+                console.log('💰 Adding credits:', creditsToAdd, 'to user:', userId);
+                
+                const userRef = db.collection('users').doc(userId);
+                
+                // Update credits
+                await userRef.update({ credits: admin.firestore.FieldValue.increment(creditsToAdd) });
+                console.log('✅ Credits updated in Firebase');
+                
+                // Save transaction
+                await userRef.collection('transactions').doc(orderReference).set({
+                    status: 'completed', amount: Number(amount), creditsAdded: creditsToAdd,
+                    createdAt: new Date(), paymentSystem: 'WayForPay'
+                });
+                console.log('✅ Transaction saved to Firebase');
+
+                const responseTime = Math.floor(Date.now() / 1000);
+                const signature = crypto.createHmac('md5', process.env.WAYFORPAY_MERCHANT_SECRET_KEY)
+                    .update(`${orderReference};accept;${responseTime}`).digest('hex');
+
+                console.log('✅ Payment processed successfully, responding to WayForPay');
+                res.json({ orderReference, status: 'accept', time: responseTime, signature });
+            } catch (error) {
+                console.error('❌ Payment processing error:', error);
+                res.status(500).json({ error: 'Payment processing failed' });
+            }
+        } else {
+            console.log('ℹ️ Payment not approved:', transactionStatus);
+            res.status(200).send('Callback received');
+        }
+    } catch (parseError) {
+        console.error('❌ Error parsing callback data:', parseError);
+        res.status(400).json({ error: 'Invalid JSON data' });
+    }
+});
+
+// Debug endpoint to check user credits
+app.get('/api/user/:userId/credits', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        console.log('🔍 Checking credits for user:', userId);
+        
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+        
+        if (!userDoc.exists) {
+            console.log('❌ User not found:', userId);
+            return res.status(404).json({ error: 'User not found', userId });
+        }
+        
+        const userData = userDoc.data();
+        console.log('✅ User data:', userData);
+        
+        // Get transactions
+        const transactions = await userRef.collection('transactions').orderBy('createdAt', 'desc').limit(10).get();
+        const transactionData = transactions.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        res.json({
+            userId,
+            credits: userData.credits || 0,
+            transactions: transactionData,
+            lastUpdated: userData.lastUpdated || null
+        });
+    } catch (error) {
+        console.error('❌ Error checking user credits:', error);
+        res.status(500).json({ error: 'Failed to check credits', details: error.message });
+    }
+});
+
+// Manual credit addition endpoint (for debugging)
+app.post('/api/user/:userId/add-credits', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const { credits, reason } = req.body;
+        
+        console.log('➕ Manually adding credits:', credits, 'to user:', userId, 'reason:', reason);
+        
+        const userRef = db.collection('users').doc(userId);
+        await userRef.update({ 
+            credits: admin.firestore.FieldValue.increment(credits),
+            lastUpdated: new Date()
+        });
+        
+        // Log the manual addition
+        await userRef.collection('transactions').add({
+            status: 'completed',
+            creditsAdded: credits,
+            amount: 0,
+            createdAt: new Date(),
+            paymentSystem: 'Manual',
+            reason: reason || 'Manual addition'
+        });
+        
+        res.json({ success: true, creditsAdded: credits, userId });
+    } catch (error) {
+        console.error('❌ Error adding credits manually:', error);
+        res.status(500).json({ error: 'Failed to add credits', details: error.message });
     }
 });
 
