@@ -112,6 +112,12 @@ const signIn = async (email, password) => {
 // Google OAuth sign in
 const signInWithGoogle = async (googleResponse) => {
   try {
+    console.log('🔐 Google OAuth - Sending request to backend:', {
+      token: googleResponse.tokenId ? 'present' : 'missing',
+      email: googleResponse.profileObj?.email,
+      name: googleResponse.profileObj?.name
+    });
+
     const response = await axios.post(`${API_URL}/api/auth/google`, {
       token: googleResponse.tokenId,
       profile: {
@@ -135,9 +141,11 @@ const signInWithGoogle = async (googleResponse) => {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       notifyAuthListeners();
+      console.log('✅ Google OAuth success:', user.email);
       return { user };
     }
   } catch (error) {
+    console.error('❌ Google OAuth failed:', error.response?.data || error.message);
     throw new Error(error.response?.data?.error || 'Google sign in failed');
   }
 };

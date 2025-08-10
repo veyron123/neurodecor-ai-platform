@@ -62,40 +62,54 @@ const LoginModal = ({ isOpen, onClose }) => {
     }
 
     try {
-      const client = window.google.accounts.oauth2.initTokenClient({
+      // Initialize Google OAuth
+      window.google.accounts.id.initialize({
         client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-        scope: 'openid email profile',
         callback: async (response) => {
-          if (response.error) {
-            setError('Google sign-in failed: ' + response.error);
+          console.log('🔐 Google OAuth response received');
+          
+          if (!response.credential) {
+            setError('No credential received from Google');
             return;
           }
 
           try {
-            // Get user info with the access token
-            const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`);
-            const userInfo = await userInfoResponse.json();
+            // Decode JWT to get user info
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            console.log('👤 User info from Google:', {
+              email: payload.email,
+              name: payload.name
+            });
             
-            // Create a compatible response object
+            // Create a compatible response object with ID token
             const compatibleResponse = {
-              tokenId: response.access_token, // Using access_token as token
+              tokenId: response.credential, // ID token for backend verification
               profileObj: {
-                email: userInfo.email,
-                name: userInfo.name,
-                imageUrl: userInfo.picture,
-                googleId: userInfo.id
+                email: payload.email,
+                name: payload.name,
+                imageUrl: payload.picture,
+                googleId: payload.sub
               }
             };
 
             await authService.signInWithGoogle(compatibleResponse);
             onClose();
           } catch (err) {
+            console.error('❌ Google OAuth processing error:', err);
             setError(err.message);
           }
-        }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: false
       });
 
-      client.requestAccessToken();
+      // Trigger the Google One Tap
+      window.google.accounts.id.prompt((notification) => {
+        console.log('Google prompt notification:', notification);
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          console.log('Google One Tap not displayed, could use popup fallback');
+        }
+      });
     } catch (error) {
       console.error('Google OAuth Error:', error);
       setError('Google sign-in failed. Please try again.');
