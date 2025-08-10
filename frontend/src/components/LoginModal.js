@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './LoginModal.css';
+import { GoogleLogin } from 'react-google-login';
 import { authService } from '../auth/authService';
 
 const LoginModal = ({ isOpen, onClose }) => {
@@ -27,10 +28,19 @@ const LoginModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSuccess = async (response) => {
     setError('');
-    // Google OAuth will be implemented later if needed
-    setError('Google sign-in temporarily unavailable. Please use email/password.');
+    try {
+      await authService.signInWithGoogle(response);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleGoogleFailure = (error) => {
+    console.error('Google OAuth Error:', error);
+    setError('Google sign-in failed. Please try again.');
   };
 
   return (
@@ -65,10 +75,23 @@ const LoginModal = ({ isOpen, onClose }) => {
         <div className="divider">
           <span>OR</span>
         </div>
-        <button className="google-btn" onClick={handleGoogleSignIn}>
-          <span className="google-icon"></span>
-          Continue with Google
-        </button>
+        <GoogleLogin
+          clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"}
+          render={renderProps => (
+            <button 
+              className="google-btn" 
+              onClick={renderProps.onClick}
+              disabled={renderProps.disabled}
+            >
+              <span className="google-icon"></span>
+              Continue with Google
+            </button>
+          )}
+          buttonText="Continue with Google"
+          onSuccess={handleGoogleSuccess}
+          onFailure={handleGoogleFailure}
+          cookiePolicy={'single_host_origin'}
+        />
       </div>
     </div>
   );

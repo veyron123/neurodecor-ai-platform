@@ -8,6 +8,7 @@ const crypto = require('crypto');
 // PostgreSQL imports
 const db = require('./database/db');
 const auth = require('./auth/auth');
+const { OAuth2Client } = require('google-auth-library');
 
 // Products configuration (same as before)
 const PRODUCTS = {
@@ -18,6 +19,9 @@ const PRODUCTS = {
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
+
+// Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Middleware
 app.use(express.json());
@@ -87,6 +91,77 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (error) {
         console.error('❌ Login failed:', error);
         res.status(401).json({ error: error.message });
+    }
+});
+
+// Google OAuth endpoint
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { token, profile } = req.body;
+        
+        if (!token || !profile?.email) {
+            return res.status(400).json({ error: 'Invalid Google token or profile data' });
+        }
+
+        // Verify Google token
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+        
+        const payload = ticket.getPayload();
+        const email = payload.email;
+        const name = payload.name;
+        const picture = payload.picture;
+        const googleId = payload.sub;
+
+        // Check if user exists
+        let user = await db.queryOne(
+            'SELECT id, email, credits, is_active FROM users WHERE email = $1',
+            [email]
+        );
+
+        if (user) {
+            // User exists, log them in
+            if (!user.is_active) {
+                return res.status(400).json({ error: 'Account is disabled' });
+            }
+            
+            // Update last login
+            await db.query(
+                'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+                [user.id]
+            );
+        } else {
+            // Create new user
+            user = await db.queryOne(
+                `INSERT INTO users (email, password_hash, credits) 
+                 VALUES ($1, $2, $3) 
+                 RETURNING id, email, credits, created_at`,
+                [email, `google_oauth_${googleId}`, 0] // Use Google ID as password placeholder
+            );
+            
+            console.log('✅ New Google user created:', email);
+        }
+
+        // Generate JWT token
+        const jwtToken = auth.generateToken(user);
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: name,
+                picture: picture,
+                credits: user.credits
+            },
+            token: jwtToken
+        });
+
+    } catch (error) {
+        console.error('❌ Google OAuth failed:', error);
+        res.status(400).json({ error: 'Google authentication failed' });
     }
 });
 

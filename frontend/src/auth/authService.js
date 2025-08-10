@@ -109,6 +109,39 @@ const signIn = async (email, password) => {
   }
 };
 
+// Google OAuth sign in
+const signInWithGoogle = async (googleResponse) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/auth/google`, {
+      token: googleResponse.tokenId,
+      profile: {
+        email: googleResponse.profileObj.email,
+        name: googleResponse.profileObj.name,
+        picture: googleResponse.profileObj.imageUrl,
+        googleId: googleResponse.profileObj.googleId
+      }
+    });
+    
+    if (response.data.success) {
+      const { user, token } = response.data;
+      
+      // Store auth data
+      authToken = token;
+      currentUser = user;
+      localStorage.setItem('neurodecor_token', token);
+      localStorage.setItem('neurodecor_user', JSON.stringify(user));
+      
+      // Set axios default authorization header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      notifyAuthListeners();
+      return { user };
+    }
+  } catch (error) {
+    throw new Error(error.response?.data?.error || 'Google sign in failed');
+  }
+};
+
 // Sign out user
 const signOut = async () => {
   authToken = null;
@@ -207,6 +240,7 @@ initAuth();
 export const authService = {
   register,
   signIn,
+  signInWithGoogle,
   signOut,
   getCurrentUser,
   isAuthenticated,
