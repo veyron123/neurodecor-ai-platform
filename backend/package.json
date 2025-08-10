@@ -9,6 +9,12 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:unit": "jest __tests__/unit",
+    "test:integration": "jest __tests__/integration",
+    "test:security": "jest __tests__/security",
+    "test:ci": "jest --coverage --watchAll=false --passWithNoTests",
+    "test:debug": "TEST_DEBUG=true jest --verbose",
+    "test:specific": "jest --testNamePattern",
     "build": "echo 'No build needed for backend'"
   },
   "dependencies": {
@@ -26,17 +32,5 @@
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
     "supertest": "^6.3.4"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "**/*.js",
-      "!node_modules/**",
-      "!coverage/**",
-      "!serviceAccountKey.json"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/"
-    ]
   }
 }
