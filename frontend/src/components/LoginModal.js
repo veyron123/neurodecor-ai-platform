@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './LoginModal.css';
-import { GoogleLogin } from 'react-google-login';
 import { authService } from '../auth/authService';
 
 const LoginModal = ({ isOpen, onClose }) => {
@@ -8,6 +7,32 @@ const LoginModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+
+  // Load Google OAuth script
+  useEffect(() => {
+    const loadGoogleScript = () => {
+      if (window.google && window.google.accounts) {
+        setGoogleLoaded(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (window.google && window.google.accounts) {
+          setGoogleLoaded(true);
+        }
+      };
+      document.head.appendChild(script);
+    };
+
+    if (isOpen) {
+      loadGoogleScript();
+    }
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -28,19 +53,53 @@ const LoginModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleGoogleSuccess = async (response) => {
+  const handleGoogleSignIn = async () => {
     setError('');
-    try {
-      await authService.signInWithGoogle(response);
-      onClose();
-    } catch (err) {
-      setError(err.message);
+    
+    if (!googleLoaded || !window.google) {
+      setError('Google OAuth is still loading. Please try again.');
+      return;
     }
-  };
 
-  const handleGoogleFailure = (error) => {
-    console.error('Google OAuth Error:', error);
-    setError('Google sign-in failed. Please try again.');
+    try {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+        scope: 'openid email profile',
+        callback: async (response) => {
+          if (response.error) {
+            setError('Google sign-in failed: ' + response.error);
+            return;
+          }
+
+          try {
+            // Get user info with the access token
+            const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`);
+            const userInfo = await userInfoResponse.json();
+            
+            // Create a compatible response object
+            const compatibleResponse = {
+              tokenId: response.access_token, // Using access_token as token
+              profileObj: {
+                email: userInfo.email,
+                name: userInfo.name,
+                imageUrl: userInfo.picture,
+                googleId: userInfo.id
+              }
+            };
+
+            await authService.signInWithGoogle(compatibleResponse);
+            onClose();
+          } catch (err) {
+            setError(err.message);
+          }
+        }
+      });
+
+      client.requestAccessToken();
+    } catch (error) {
+      console.error('Google OAuth Error:', error);
+      setError('Google sign-in failed. Please try again.');
+    }
   };
 
   return (
@@ -75,23 +134,14 @@ const LoginModal = ({ isOpen, onClose }) => {
         <div className="divider">
           <span>OR</span>
         </div>
-        <GoogleLogin
-          clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"}
-          render={renderProps => (
-            <button 
-              className="google-btn" 
-              onClick={renderProps.onClick}
-              disabled={renderProps.disabled}
-            >
-              <span className="google-icon"></span>
-              Continue with Google
-            </button>
-          )}
-          buttonText="Continue with Google"
-          onSuccess={handleGoogleSuccess}
-          onFailure={handleGoogleFailure}
-          cookiePolicy={'single_host_origin'}
-        />
+        <button 
+          className="google-btn" 
+          onClick={handleGoogleSignIn}
+          disabled={!googleLoaded}
+        >
+          <span className="google-icon"></span>
+          {googleLoaded ? 'Continue with Google' : 'Loading Google...'}
+        </button>
       </div>
     </div>
   );
