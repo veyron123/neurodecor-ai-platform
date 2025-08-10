@@ -12,7 +12,7 @@
 - 🎯 **AI-Powered Transformation** - Flux.1 Kontext для реалистичных дизайнов
 - 🎨 **6 Interior Styles** - Scandinavian, Modern, Minimalist, Coastal, Industrial, Traditional
 - 🏠 **6 Room Types** - Bedroom, Living Room, Kitchen, Dining Room, Bathroom, Home Office
-- 🔐 **Secure Authentication** - Firebase с Google OAuth
+- 🔐 **Secure Authentication** - JWT с PostgreSQL
 - 💳 **Credit System** - WayForPay интеграция для украинского рынка
 - 🌐 **Multilingual** - EN/UK/RU локализация
 - 📱 **Responsive Design** - Адаптивная верстка для всех устройств
@@ -48,15 +48,15 @@ npm run deploy:check
 ### Backend (Node.js/Express)
 ```
 backend/
-├── server.js              # Main server with KISS principles
+├── server-postgres.js     # Main PostgreSQL server
 ├── __tests__/            # Comprehensive test suite  
 ├── __mocks__/            # Mock data for testing
-└── serviceAccountKey.json # Firebase credentials
+└── database/             # PostgreSQL schema and connection
 ```
 
 **Key Features:**
 - Simplified API endpoints (health, transform, payments)
-- Firebase Admin SDK integration
+- PostgreSQL database with JWT authentication
 - Flux.1 Kontext AI processing
 - CORS configuration for production
 - Comprehensive error handling

@@ -5,7 +5,7 @@ services:
     env: node
     plan: free
     buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    startCommand: cd backend && node server-postgres.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

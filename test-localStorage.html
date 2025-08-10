@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Demo Payment System</title>
+</head>
+<body>
+    <h1>🧪 Test Demo Payment System</h1>
+    <div id="output"></div>
+    <br>
+    <button onclick="testDemo()">Test Demo System</button>
+    <button onclick="buyCredits()">Buy 10 Credits</button>
+    <button onclick="useCredit()">Use 1 Credit</button>
+    <button onclick="clearDemo()">Clear Demo</button>
+    <button onclick="checkStatus()">Check Status</button>
+
+    <script>
+        // Copy demo payment system
+        const demoPaymentSystem = {
+            init: () => {
+                if (!localStorage.getItem('demo_credits')) {
+                    localStorage.setItem('demo_credits', '0');
+                    localStorage.setItem('demo_initialized', 'true');
+                    console.log('🎮 Demo payment system initialized with 0 credits');
+                }
+            },
+
+            getDemoCredits: () => {
+                return parseInt(localStorage.getItem('demo_credits') || '0');
+            },
+
+            setDemoCredits: (credits) => {
+                localStorage.setItem('demo_credits', credits.toString());
+            },
+
+            simulatePayment: (productId) => {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        const products = {
+                            'prod_basic_10_credits': { credits: 10, price: 1 },
+                        };
+                        
+                        const product = products[productId];
+                        if (product) {
+                            const currentCredits = demoPaymentSystem.getDemoCredits();
+                            demoPaymentSystem.setDemoCredits(currentCredits + product.credits);
+                            resolve({
+                                success: true,
+                                creditsAdded: product.credits,
+                                totalCredits: currentCredits + product.credits
+                            });
+                        } else {
+                            resolve({ success: false, error: 'Unknown product' });
+                        }
+                    }, 1000);
+                });
+            },
+
+            useCredit: () => {
+                const credits = demoPaymentSystem.getDemoCredits();
+                if (credits > 0) {
+                    demoPaymentSystem.setDemoCredits(credits - 1);
+                    return true;
+                }
+                return false;
+            },
+
+            clearDemo: () => {
+                localStorage.removeItem('demo_credits');
+                localStorage.removeItem('demo_initialized');
+                console.log('🧹 Demo system cleared');
+            }
+        };
+
+        function log(message) {
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+
+        function testDemo() {
+            log('🔍 Testing Demo System...');
+            demoPaymentSystem.init();
+            const credits = demoPaymentSystem.getDemoCredits();
+            log('📊 Current credits: ' + credits);
+        }
+
+        async function buyCredits() {
+            log('💳 Buying 10 credits...');
+            const result = await demoPaymentSystem.simulatePayment('prod_basic_10_credits');
+            if (result.success) {
+                log('✅ Purchase successful! Credits: ' + result.totalCredits);
+            } else {
+                log('❌ Purchase failed: ' + result.error);
+            }
+        }
+
+        function useCredit() {
+            log('🎨 Using 1 credit...');
+            if (demoPaymentSystem.useCredit()) {
+                const remaining = demoPaymentSystem.getDemoCredits();
+                log('✅ Credit used! Remaining: ' + remaining);
+            } else {
+                log('❌ No credits available');
+            }
+        }
+
+        function clearDemo() {
+            demoPaymentSystem.clearDemo();
+            log('🧹 Demo system cleared');
+        }
+
+        function checkStatus() {
+            const credits = demoPaymentSystem.getDemoCredits();
+            const initialized = localStorage.getItem('demo_initialized');
+            log('📊 Status: Credits=' + credits + ', Initialized=' + initialized);
+        }
+
+        // Auto-initialize
+        demoPaymentSystem.init();
+        log('🎮 Demo system ready');
+    </script>
+</body>
+</html>

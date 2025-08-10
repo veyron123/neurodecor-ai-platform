@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
 import './LoginModal.css';
-import { auth, googleProvider } from '../firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup
-} from "firebase/auth";
+import { authService } from '../auth/authService';
 
 const LoginModal = ({ isOpen, onClose }) => {
   const [isLogin, setIsLogin] = useState(false);
@@ -22,9 +17,9 @@ const LoginModal = ({ isOpen, onClose }) => {
     setError('');
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await authService.signIn(email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await authService.register(email, password);
       }
       onClose();
     } catch (err) {
@@ -34,12 +29,8 @@ const LoginModal = ({ isOpen, onClose }) => {
 
   const handleGoogleSignIn = async () => {
     setError('');
-    try {
-      await signInWithPopup(auth, googleProvider);
-      onClose();
-    } catch (err) {
-      setError(err.message);
-    }
+    // Google OAuth will be implemented later if needed
+    setError('Google sign-in temporarily unavailable. Please use email/password.');
   };
 
   return (

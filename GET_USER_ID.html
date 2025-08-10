@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Firebase User ID</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+</head>
+<body>
+    <h2>Get Firebase User ID</h2>
+    <p>Откройте консоль браузера (F12) и выполните:</p>
+    <code>
+        console.log('User ID:', firebase.auth().currentUser?.uid);
+    </code>
+    
+    <br><br>
+    <p>Или используйте эти кнопки:</p>
+    <button onclick="getCurrentUser()">Get Current User ID</button>
+    <div id="result"></div>
+
+    <script>
+        function getCurrentUser() {
+            // Получаем из localStorage Firebase auth токен
+            const keys = Object.keys(localStorage);
+            const firebaseKey = keys.find(key => key.startsWith('firebase:authUser:'));
+            
+            if (firebaseKey) {
+                const userData = JSON.parse(localStorage.getItem(firebaseKey));
+                document.getElementById('result').innerHTML = `
+                    <h3>Firebase User Data:</h3>
+                    <p><strong>User ID:</strong> ${userData.uid}</p>
+                    <p><strong>Email:</strong> ${userData.email}</p>
+                    <p><strong>Display Name:</strong> ${userData.displayName || 'Not set'}</p>
+                `;
+                console.log('🔍 User ID:', userData.uid);
+                console.log('📧 Email:', userData.email);
+            } else {
+                document.getElementById('result').innerHTML = '<p>❌ No Firebase user found in localStorage</p>';
+            }
+        }
+    </script>
+</body>
+</html>

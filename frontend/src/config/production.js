@@ -11,7 +11,7 @@ export const PRODUCTION_CONFIG = {
   
   // Credit system settings
   CREDIT_SYSTEM: {
-    provider: 'Firebase',
+    provider: 'PostgreSQL',
     fallback: 'demo', // Only as emergency fallback
     minCredits: 0,
     showBalance: true
@@ -19,7 +19,7 @@ export const PRODUCTION_CONFIG = {
   
   // API endpoints
   API: {
-    baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:3007',
+    baseUrl: process.env.REACT_APP_API_URL || 'https://neurodecor-backend.onrender.com',
     paymentEndpoint: '/api/create-payment',
     callbackEndpoint: '/api/payment-callback'
   },

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Pricing.css';
 import { useTranslation } from 'react-i18next';
 import { products } from '../pricingData'; // Импортируем напрямую продукты
-import { auth } from '../firebase';
+import { authService } from '../auth/authService';
 import axios from 'axios';
 
 const Pricing = ({ onSubscribeClick, onCreditsUpdate }) => {
@@ -10,7 +10,7 @@ const Pricing = ({ onSubscribeClick, onCreditsUpdate }) => {
   const [isLoading, setIsLoading] = useState(null); // Будем хранить ID загружаемого плана
 
   const handlePurchase = async (product) => {
-    const user = auth.currentUser;
+    const user = authService.getCurrentUser();
     
     // PRODUCTION MODE: Real payments only, require authentication
     if (user) {
@@ -23,12 +23,20 @@ const Pricing = ({ onSubscribeClick, onCreditsUpdate }) => {
   };
 
   const handleRealPayment = async (user, product) => {
-
     setIsLoading(product.id);
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:3007'}/api/create-payment`, {
-        userId: user.uid,
+      // Get auth token for authenticated request
+      const token = authService.getToken();
+      console.log('🔐 Making payment request with token:', token ? 'present' : 'missing');
+      
+      const response = await axios.post(`${process.env.REACT_APP_API_URL || 'https://neurodecor-backend.onrender.com'}/api/create-payment`, {
+        userId: user.id,
         productId: product.id,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       const paymentData = response.data;

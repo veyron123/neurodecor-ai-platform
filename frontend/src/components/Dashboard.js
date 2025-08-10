@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
+import { authService } from '../auth/authService';
 import './Dashboard.css';
 import { useTranslation } from 'react-i18next';
 import { getPricingData } from '../pricingData';
@@ -196,7 +196,7 @@ const BellIcon = () => <span>🔔</span>;
 
 const Dashboard = ({ credits, deductCredit }) => {
   const [activeView, setActiveView] = useState('properties');
-  const user = auth.currentUser;
+  const user = authService.getCurrentUser();
 
   if (!user) {
     return <div>Loading user data...</div>;
@@ -247,7 +247,7 @@ const Dashboard = ({ credits, deductCredit }) => {
             <button className="icon-btn"><CartIcon /></button>
             <button className="icon-btn"><BellIcon /></button>
             <div className="user-avatar">{userInitial}</div>
-            <button onClick={() => auth.signOut()} className="signout-btn-header">
+            <button onClick={() => authService.signOut()} className="signout-btn-header">
                 Sign Out
             </button>
           </div>

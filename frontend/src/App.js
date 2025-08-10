@@ -1,10 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import './App.css';
-import { auth, db, handleFirestoreError, retryFirestoreOperation } from './firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { demoPaymentSystem } from './utils/demo-payment';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { authService } from './auth/authService';
 import Header from './components/Header';
 import SimpleRoomTransformer from './components/SimpleRoomTransformer';
 import HeroSlider from './components/HeroSlider';
@@ -61,98 +58,54 @@ function App() {
   const [credits, setCredits] = useState(0);
 
   useEffect(() => {
-    // Initialize demo system as fallback only
-    demoPaymentSystem.init();
-    
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = authService.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setLoading(false);
       
       if (currentUser) {
         setIsLoginModalOpen(false);
-        // PRODUCTION MODE: Always fetch Firebase credits for authenticated users
-        fetchCredits(currentUser.uid);
-        console.log('🔄 PRODUCTION MODE: Loading Firebase credits for authenticated user');
+        // Fetch PostgreSQL credits for authenticated users
+        fetchCredits();
+        console.log('🔄 PostgreSQL AUTH: Loading user credits for:', currentUser.email);
       } else {
         // Non-authenticated users start with 0 credits (require login)
         setCredits(0);
-        console.log('👤 Non-authenticated user - login required for credits');
+        console.log('👤 Not authenticated - login required for credits');
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const fetchCredits = async (uid) => {
-    // PRODUCTION MODE: Firebase first, demo only as emergency fallback
-    const userDocRef = doc(db, 'users', uid);
+  const fetchCredits = async () => {
     try {
-      const userDoc = await retryFirestoreOperation(async () => {
-        return await getDoc(userDocRef);
-      });
-      if (userDoc.exists()) {
-        const firebaseCredits = userDoc.data().credits || 0;
-        setCredits(firebaseCredits);
-        console.log('🔥 PRODUCTION: Using Firebase credits:', firebaseCredits);
-      } else {
-        // Create user document if it doesn't exist with 0 credits
-        console.log('🆕 Creating new user document with 0 credits');
-        await retryFirestoreOperation(async () => {
-          return await updateDoc(userDocRef, { credits: 0 });
-        });
-        setCredits(0);
-      }
+      const userCredits = await authService.getUserCredits();
+      setCredits(userCredits);
+      console.log(`✅ PostgreSQL credits loaded: ${userCredits}`);
     } catch (error) {
-      const errorMessage = handleFirestoreError(error);
-      console.error("⚠️ Firebase not available, emergency fallback to demo:", errorMessage);
-      
-      // Emergency fallback to demo system only if Firebase completely fails
-      const demoCredits = demoPaymentSystem.getDemoCredits();
-      setCredits(demoCredits);
-      console.log('🚨 Emergency demo fallback:', demoCredits);
+      console.error('❌ Failed to fetch PostgreSQL credits:', error);
+      setCredits(0);
     }
   };
 
   const deductCredit = async () => {
     console.log('🎯 deductCredit called! Current credits:', credits, 'User:', user ? 'authenticated' : 'guest');
     
-    if (credits > 0) {
-      // PRODUCTION MODE: Firebase first, demo as fallback only
-      if (user) {
-        console.log('🔄 Using Firebase for authenticated user...');
-        const userDocRef = doc(db, 'users', user.uid);
-        const newCredits = Math.max(0, credits - 1);
-        try {
-          await retryFirestoreOperation(async () => {
-            return await updateDoc(userDocRef, {
-              credits: newCredits
-            });
-          });
-          setCredits(newCredits);
-          console.log('✅ Firebase credits updated:', newCredits, '(PRODUCTION MODE)');
-          return; // Exit early - Firebase worked
-        } catch (error) {
-          const errorMessage = handleFirestoreError(error);
-          console.error('❌ Firebase failed, trying demo fallback:', errorMessage);
-          // Fallback to demo system only if Firebase fails
-          if (demoPaymentSystem.useCredit()) {
-            const demoCredits = demoPaymentSystem.getDemoCredits();
-            setCredits(demoCredits);
-            console.log('✅ Demo credits updated as fallback:', demoCredits);
-            return;
-          }
-        }
-      } else {
-        // Non-authenticated users require login for real payments
-        console.log('⚠️ Non-authenticated user - login required for real payments');
-        alert('Пожалуйста, войдите в систему для покупки и использования кредитов');
-        return;
+    if (credits > 0 && user) {
+      try {
+        const newCredits = await authService.deductCredits(1);
+        setCredits(newCredits);
+        console.log('✅ PostgreSQL credits updated:', newCredits);
+      } catch (error) {
+        console.error('❌ Failed to deduct credit:', error);
+        alert('Failed to deduct credit. Please try again.');
       }
-      
-      // If all systems fail, set credits anyway for UX
-      setCredits(Math.max(0, credits - 1));
+    } else if (!user) {
+      console.log('❌ No authenticated user - cannot deduct credit');
+      alert('Please log in to use credits');
+      setIsLoginModalOpen(true);
     } else {
-      console.log('⚠️ No credits available to deduct');
-      alert('У вас недостаточно кредитов. Пожалуйста, купите больше кредитов.');
+      console.log('❌ No credits available to deduct');
+      alert('No credits available. Please purchase more credits.');
     }
   };
 
@@ -164,7 +117,7 @@ function App() {
   const handleCloseContactModal = () => setIsContactModalOpen(false);
 
   const handleSignOut = () => {
-    signOut(auth);
+    authService.signOut();
   };
 
   if (loading) {
