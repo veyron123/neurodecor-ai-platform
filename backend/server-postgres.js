@@ -300,8 +300,109 @@ app.post('/api/payment-callback', async (req, res) => {
     }
 });
 
-// ========== IMAGE TRANSFORMATION (same as before) ==========
-// ... (keeping existing image transformation logic)
+// ========== IMAGE TRANSFORMATION ==========
+
+// Create transformation prompt
+const createPrompt = (roomType, furnitureStyle) => {
+    const rooms = {
+        'living-room': 'living room', 'bedroom': 'bedroom', 'kitchen': 'kitchen',
+        'dining-room': 'dining room', 'bathroom': 'bathroom', 'home-office': 'home office'
+    };
+    
+    const styles = {
+        'scandinavian': 'Scandinavian style with soft lighting and white wood',
+        'modern': 'modern style with sleek furniture and clean lines',
+        'minimalist': 'minimalist style with simple furniture and clean surfaces',
+        'coastal': 'coastal style with light blue and natural textures',
+        'industrial': 'industrial style with exposed brick and metal',
+        'traditional': 'traditional style with classic furniture'
+    };
+
+    const room = rooms[roomType] || roomType;
+    const style = styles[furnitureStyle] || `${furnitureStyle} style`;
+    
+    return `Transform this ${room} into ${style}. Keep the layout, make it photorealistic.`;
+};
+
+// Process image with Flux API
+const processWithFlux = async (prompt, imageBuffer, apiKey) => {
+    const response = await axios.post('https://api.bfl.ai/v1/flux-kontext-pro', {
+        prompt, input_image: imageBuffer.toString('base64')
+    }, {
+        headers: { 'accept': 'application/json', 'x-key': apiKey, 'Content-Type': 'application/json' }
+    });
+    
+    const pollingUrl = response.data.polling_url;
+    if (!pollingUrl) throw new Error('No polling URL received');
+    
+    for (let i = 0; i < 30; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const result = await axios.get(pollingUrl, {
+            headers: { 'accept': 'application/json', 'x-key': apiKey }
+        });
+        
+        if (result.data.status === 'Ready') {
+            const imageResponse = await axios.get(result.data.result.sample, { responseType: 'arraybuffer' });
+            return imageResponse.data;
+        }
+        if (['Error', 'Failed'].includes(result.data.status)) {
+            throw new Error(`Generation failed: ${result.data.status}`);
+        }
+    }
+    throw new Error('Generation timed out');
+};
+
+// Image transformation endpoint (protected)
+app.post('/transform', auth.requireAuth, upload.single('image'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    
+    const { roomType, furnitureStyle } = req.body;
+    if (!roomType || !furnitureStyle) {
+        return res.status(400).json({ error: 'Room type and style required' });
+    }
+
+    try {
+        // Check user has credits
+        const user = await auth.getUserById(req.user.id);
+        if (!user || user.credits <= 0) {
+            return res.status(400).json({ error: 'Insufficient credits' });
+        }
+
+        const prompt = createPrompt(roomType, furnitureStyle);
+        console.log(`Processing: ${roomType} -> ${furnitureStyle} for user ${req.user.id}`);
+
+        if (process.env.BFL_API_KEY && process.env.BFL_API_KEY !== 'YOUR_API_KEY_HERE') {
+            const fs = require('fs');
+            const imageBuffer = fs.readFileSync(req.file.path);
+            const result = await processWithFlux(prompt, imageBuffer, process.env.BFL_API_KEY);
+            
+            // Deduct credit after successful generation
+            await auth.deductCredits(req.user.id, 1);
+            console.log(`✅ Credit deducted for user ${req.user.id}`);
+            
+            // Clean up uploaded file
+            fs.unlinkSync(req.file.path);
+            
+            res.set('Content-Type', 'image/jpeg');
+            res.send(result);
+        } else {
+            res.status(500).json({ error: 'API key not configured' });
+        }
+        
+    } catch (error) {
+        console.error('Transform error:', error.message);
+        
+        // Clean up uploaded file on error
+        try {
+            const fs = require('fs');
+            fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+            console.error('File cleanup error:', cleanupError.message);
+        }
+        
+        res.status(500).json({ error: 'Transform failed', details: error.message });
+    }
+});
 
 // ========== DEBUG ENDPOINTS ==========
 
