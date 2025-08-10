@@ -66,8 +66,7 @@ app.post('/api/auth/register', async (req, res) => {
             token: result.token
         });
     } catch (error) {
-        console.error('❌ Registration failed:', error);
-        res.status(400).json({ error: error.message });
+        return handleError(res, error, error.message, 400);
     }
 });
 
@@ -89,8 +88,7 @@ app.post('/api/auth/login', async (req, res) => {
             token: result.token
         });
     } catch (error) {
-        console.error('❌ Login failed:', error);
-        res.status(401).json({ error: error.message });
+        return handleError(res, error, error.message, 401);
     }
 });
 
@@ -160,8 +158,7 @@ app.post('/api/auth/google', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Google OAuth failed:', error);
-        res.status(400).json({ error: 'Google authentication failed' });
+        return handleError(res, error, 'Google authentication failed', 400);
     }
 });
 
@@ -184,8 +181,7 @@ app.get('/api/auth/me', auth.requireAuth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Get user failed:', error);
-        res.status(500).json({ error: 'Failed to get user data' });
+        return handleError(res, error, 'Failed to get user data');
     }
 });
 
@@ -201,8 +197,7 @@ app.get('/api/credits', auth.requireAuth, async (req, res) => {
             userId: req.user.id
         });
     } catch (error) {
-        console.error('❌ Get credits failed:', error);
-        res.status(500).json({ error: 'Failed to get credits' });
+        return handleError(res, error, 'Failed to get credits');
     }
 });
 
@@ -219,8 +214,7 @@ app.post('/api/credits/deduct', auth.requireAuth, async (req, res) => {
             creditsRemaining: newCredits
         });
     } catch (error) {
-        console.error('❌ Deduct credits failed:', error);
-        res.status(400).json({ error: error.message });
+        return handleError(res, error, error.message, 400);
     }
 });
 
@@ -272,140 +266,75 @@ app.post('/api/create-payment', auth.requireAuth, async (req, res) => {
             serviceUrl, merchantSignature
         });
     } catch (error) {
-        console.error('❌ Payment creation failed:', error);
-        res.status(500).json({ error: 'Failed to create payment' });
+        return handleError(res, error, 'Failed to create payment');
     }
 });
 
-// Payment callback endpoint
-app.post('/api/payment-callback', async (req, res) => {
-    console.log('💳 PAYMENT CALLBACK RECEIVED:', Date.now());
-    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('📋 Request headers:', JSON.stringify(req.headers, null, 2));
-    
-    let data;
-    
-    // Handle different callback formats
-    if (req.headers['content-type']?.includes('application/json')) {
-        // JSON format
-        data = req.body;
-        console.log('📊 JSON callback data:', JSON.stringify(data, null, 2));
-    } else {
-        // Form-encoded format (WayForPay standard)
-        // Check if data is in req.body directly
-        if (req.body.orderReference || req.body.transactionStatus) {
-            data = req.body;
-            console.log('📊 Form-encoded callback data:', JSON.stringify(data, null, 2));
-        } else {
-            // Try to parse first key as JSON (old format)
-            const bodyKey = Object.keys(req.body)[0];
-            if (!bodyKey) {
-                console.error('❌ No data found in callback');
-                return res.status(400).json({ error: 'Invalid callback format' });
-            }
-            
-            try {
-                data = JSON.parse(bodyKey);
-                console.log('📊 Parsed JSON from key:', JSON.stringify(data, null, 2));
-            } catch (parseError) {
-                console.error('❌ Failed to parse callback data:', parseError.message);
-                console.log('🔍 Raw body keys:', Object.keys(req.body));
-                return res.status(400).json({ error: 'Invalid JSON data' });
-            }
-        }
-    }
-        
-    // Handle different field names that WayForPay might use
-    const orderReference = data.orderReference || data.order_reference || data.orderRef;
-    const transactionStatus = data.transactionStatus || data.transaction_status || data.reasonCode;
-    const amount = data.amount || data.sum;
-    
-    console.log('🔍 Extracted data:', {
-        orderReference,
-        transactionStatus, 
-        amount,
-        allFields: Object.keys(data)
+// Helper functions for payment processing
+const processSuccessfulPayment = async (transaction, callbackData) => {
+    await db.transaction(async (client) => {
+        await client.query(
+            'UPDATE transactions SET status = $1, callback_data = $2, updated_at = CURRENT_TIMESTAMP WHERE order_reference = $3',
+            ['completed', JSON.stringify(callbackData), transaction.order_reference]
+        );
+        await client.query(
+            'UPDATE users SET credits = credits + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [transaction.credits_added, transaction.user_id]
+        );
     });
-        
+};
+
+const updateTransactionStatus = async (transaction, status, callbackData) => {
+    await db.query(
+        'UPDATE transactions SET status = $1, callback_data = $2, updated_at = CURRENT_TIMESTAMP WHERE order_reference = $3',
+        [status.toLowerCase(), JSON.stringify(callbackData), transaction.order_reference]
+    );
+};
+
+const handleError = (res, error, message, statusCode = 500) => {
+    console.error(`❌ ${message}:`, error);
+    res.status(statusCode).json({ error: message });
+};
+
+// Payment callback endpoint (KISS refactored)
+app.post('/api/payment-callback', async (req, res) => {
+    console.log('💳 Payment callback received:', req.body);
+    
+    // WayForPay sends form-encoded data - extract directly
+    const { orderReference, transactionStatus } = req.body;
+    
     if (!orderReference) {
-        console.error('❌ No order reference in callback');
-        console.log('🔍 Available fields:', Object.keys(data));
-        return res.status(400).json({ error: 'Invalid payment data' });
+        return handleError(res, 'Missing order reference', 'Invalid payment data', 400);
     }
 
-        // Find transaction in database
+    try {
         const transaction = await db.queryOne(
             'SELECT * FROM transactions WHERE order_reference = $1',
             [orderReference]
         );
 
         if (!transaction) {
-            console.error('❌ Transaction not found:', orderReference);
-            return res.status(400).json({ error: 'Transaction not found' });
+            return handleError(res, `Transaction ${orderReference} not found`, 'Transaction not found', 400);
         }
 
-        console.log('📋 Found transaction:', transaction);
-
-        // Check for successful payment status (WayForPay uses different statuses)
-        const isSuccessful = ['Approved', 'approved', 'APPROVED', '1'].includes(transactionStatus);
-        
-        if (isSuccessful) {
-            console.log('✅ Payment approved, processing...');
+        // WayForPay sends "Approved" for successful payments
+        if (transactionStatus === 'Approved') {
+            await processSuccessfulPayment(transaction, req.body);
+            console.log('✅ Credits added:', transaction.credits_added, 'to user:', transaction.user_id);
             
-            try {
-                // Use database transaction for atomicity
-                await db.transaction(async (client) => {
-                    // Update transaction status
-                    await client.query(
-                        `UPDATE transactions 
-                         SET status = 'completed', updated_at = CURRENT_TIMESTAMP, callback_data = $1
-                         WHERE order_reference = $2`,
-                        [JSON.stringify(data), orderReference]
-                    );
-
-                    // Add credits to user
-                    await client.query(
-                        `UPDATE users 
-                         SET credits = credits + $1, updated_at = CURRENT_TIMESTAMP 
-                         WHERE id = $2`,
-                        [transaction.credits_added, transaction.user_id]
-                    );
-                });
-
-                console.log('✅ Credits added successfully:', transaction.credits_added, 'to user:', transaction.user_id);
-
-                const responseTime = Math.floor(Date.now() / 1000);
-                const signature = crypto.createHmac('md5', process.env.WAYFORPAY_MERCHANT_SECRET_KEY)
-                    .update(`${orderReference};accept;${responseTime}`).digest('hex');
-
-                console.log('✅ Payment processed successfully, responding to WayForPay');
-                res.json({ orderReference, status: 'accept', time: responseTime, signature });
-            } catch (error) {
-                console.error('❌ Payment processing error:', error);
-                
-                // Mark transaction as failed
-                await db.query(
-                    `UPDATE transactions 
-                     SET status = 'failed', callback_data = $1, updated_at = CURRENT_TIMESTAMP
-                     WHERE order_reference = $2`,
-                    [JSON.stringify({ error: error.message, callback: data }), orderReference]
-                );
-                
-                res.status(500).json({ error: 'Payment processing failed' });
-            }
+            // Respond to WayForPay
+            const responseTime = Math.floor(Date.now() / 1000);
+            const signature = crypto.createHmac('md5', process.env.WAYFORPAY_MERCHANT_SECRET_KEY)
+                .update(`${orderReference};accept;${responseTime}`).digest('hex');
+            
+            return res.json({ orderReference, status: 'accept', time: responseTime, signature });
         } else {
-            console.log('ℹ️ Payment not approved:', transactionStatus);
-            
-            // Update transaction status
-            await db.query(
-                `UPDATE transactions 
-                 SET status = $1, callback_data = $2, updated_at = CURRENT_TIMESTAMP
-                 WHERE order_reference = $3`,
-                [transactionStatus.toLowerCase(), JSON.stringify(data), orderReference]
-            );
-            
-            res.status(200).send('Callback received');
+            await updateTransactionStatus(transaction, transactionStatus, req.body);
+            return res.status(200).send('Callback received');
         }
+    } catch (error) {
+        return handleError(res, error, 'Payment processing failed');
+    }
 });
 
 // ========== IMAGE TRANSFORMATION ==========
@@ -498,8 +427,6 @@ app.post('/transform', auth.requireAuth, upload.single('image'), async (req, res
         }
         
     } catch (error) {
-        console.error('Transform error:', error.message);
-        
         // Clean up uploaded file on error
         try {
             const fs = require('fs');
@@ -508,126 +435,11 @@ app.post('/transform', auth.requireAuth, upload.single('image'), async (req, res
             console.error('File cleanup error:', cleanupError.message);
         }
         
-        res.status(500).json({ error: 'Transform failed', details: error.message });
+        return handleError(res, error, 'Transform failed');
     }
 });
 
-// ========== DEBUG ENDPOINTS ==========
-
-// Test callback endpoint with different formats
-app.post('/api/test-callback', async (req, res) => {
-    console.log('🧪 TEST CALLBACK RECEIVED:', Date.now());
-    console.log('📋 Test body:', JSON.stringify(req.body, null, 2));
-    console.log('📋 Test headers:', JSON.stringify(req.headers, null, 2));
-    console.log('🔍 Body keys:', Object.keys(req.body));
-    
-    res.json({
-        success: true,
-        receivedData: req.body,
-        headers: req.headers,
-        contentType: req.headers['content-type']
-    });
-});
-
-// Debug Service URL generation
-app.get('/api/debug-service-url', (req, res) => {
-    const { NGROK_URL } = process.env;
-    const serviceUrl = NGROK_URL ? `${NGROK_URL}/api/payment-callback` : `https://${req.get('host')}/api/payment-callback`;
-    
-    console.log('🔍 DEBUG Service URL generation:');
-    console.log('  NGROK_URL env var:', NGROK_URL || 'not set');
-    console.log('  req.protocol:', req.protocol);
-    console.log('  req.get("host"):', req.get('host'));
-    console.log('  Final serviceUrl:', serviceUrl);
-    console.log('  🔧 FIXED: Using HTTPS instead of HTTP for callback URL');
-    
-    res.json({
-        success: true,
-        ngrokUrl: NGROK_URL || null,
-        protocol: req.protocol,
-        host: req.get('host'),
-        finalServiceUrl: serviceUrl,
-        fullUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
-        note: "Fixed: Using HTTPS for callback URL to ensure WayForPay can reach the endpoint"
-    });
-});
-
-// Manual payment processing endpoint (for debugging)
-app.post('/api/manual-complete-payment', async (req, res) => {
-    try {
-        const { orderReference } = req.body;
-        
-        if (!orderReference) {
-            return res.status(400).json({ error: 'Order reference required' });
-        }
-
-        // Find transaction
-        const transaction = await db.queryOne(
-            'SELECT * FROM transactions WHERE order_reference = $1',
-            [orderReference]
-        );
-
-        if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-
-        if (transaction.status === 'completed') {
-            return res.status(400).json({ error: 'Transaction already completed' });
-        }
-
-        console.log('🔧 Manual payment processing:', orderReference);
-
-        // Use database transaction for atomicity
-        await db.transaction(async (client) => {
-            // Update transaction status
-            await client.query(
-                `UPDATE transactions 
-                 SET status = 'completed', updated_at = CURRENT_TIMESTAMP, callback_data = $1
-                 WHERE order_reference = $2`,
-                [JSON.stringify({ manual: true, timestamp: Date.now() }), orderReference]
-            );
-
-            // Add credits to user
-            await client.query(
-                `UPDATE users 
-                 SET credits = credits + $1, updated_at = CURRENT_TIMESTAMP 
-                 WHERE id = $2`,
-                [transaction.credits_added, transaction.user_id]
-            );
-        });
-
-        console.log('✅ Manual payment processed - Credits added:', transaction.credits_added, 'to user:', transaction.user_id);
-
-        res.json({
-            success: true,
-            orderReference,
-            creditsAdded: transaction.credits_added,
-            userId: transaction.user_id
-        });
-
-    } catch (error) {
-        console.error('❌ Manual payment processing error:', error);
-        res.status(500).json({ error: 'Failed to process payment' });
-    }
-});
-
-// List pending transactions endpoint
-app.get('/api/pending-transactions', async (req, res) => {
-    try {
-        const transactions = await db.query(
-            'SELECT * FROM transactions WHERE status = $1 ORDER BY created_at DESC',
-            ['pending']
-        );
-
-        res.json({
-            success: true,
-            transactions: transactions.rows
-        });
-    } catch (error) {
-        console.error('❌ Failed to get pending transactions:', error);
-        res.status(500).json({ error: 'Failed to get transactions' });
-    }
-});
+// ========== HEALTH CHECK ==========
 
 // Database health check
 app.get('/api/health', async (req, res) => {
