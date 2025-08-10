@@ -74,11 +74,18 @@ const LoginModal = ({ isOpen, onClose }) => {
           }
 
           try {
-            // Decode JWT to get user info
-            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            // Decode JWT to get user info - handle base64url encoding
+            const base64Url = response.credential.split('.')[1];
+            // Convert base64url to base64
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            // Add padding if needed
+            const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+            
+            const payload = JSON.parse(atob(padded));
             console.log('👤 User info from Google:', {
               email: payload.email,
-              name: payload.name
+              name: payload.name,
+              sub: payload.sub
             });
             
             // Create a compatible response object with ID token
@@ -96,7 +103,14 @@ const LoginModal = ({ isOpen, onClose }) => {
             onClose();
           } catch (err) {
             console.error('❌ Google OAuth processing error:', err);
-            setError(err.message);
+            
+            if (err.name === 'InvalidCharacterError' || err.message.includes('atob')) {
+              setError('Failed to decode Google token. Please try again.');
+            } else if (err.message.includes('JSON')) {
+              setError('Invalid token format from Google. Please try again.');
+            } else {
+              setError(err.message || 'Google sign-in failed. Please try again.');
+            }
           }
         },
         auto_select: false,
