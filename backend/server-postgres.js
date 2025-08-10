@@ -427,7 +427,12 @@ app.get('/', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3007;
+// Simple health check for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`🚀 NeuroDecor Backend v2.0 running on port ${PORT}`);
     console.log(`🗄️ Using PostgreSQL database`);
