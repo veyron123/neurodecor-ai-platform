@@ -48,11 +48,13 @@ const PRODUCTS = {
 };
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3007;
 
 // CORS configuration for production
 const allowedOrigins = [
-  'http://localhost:3002',
+  'http://localhost:3000',
+  'http://localhost:3002', 
+  'http://localhost:3006',
   'https://neurodecor-frontend.onrender.com',
   'https://neurodecor.onrender.com'
 ];
