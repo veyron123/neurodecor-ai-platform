@@ -529,6 +529,27 @@ app.post('/api/test-callback', async (req, res) => {
     });
 });
 
+// Debug Service URL generation
+app.get('/api/debug-service-url', (req, res) => {
+    const { NGROK_URL } = process.env;
+    const serviceUrl = NGROK_URL ? `${NGROK_URL}/api/payment-callback` : `${req.protocol}://${req.get('host')}/api/payment-callback`;
+    
+    console.log('🔍 DEBUG Service URL generation:');
+    console.log('  NGROK_URL env var:', NGROK_URL || 'not set');
+    console.log('  req.protocol:', req.protocol);
+    console.log('  req.get("host"):', req.get('host'));
+    console.log('  Final serviceUrl:', serviceUrl);
+    
+    res.json({
+        success: true,
+        ngrokUrl: NGROK_URL || null,
+        protocol: req.protocol,
+        host: req.get('host'),
+        finalServiceUrl: serviceUrl,
+        fullUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`
+    });
+});
+
 // Manual payment processing endpoint (for debugging)
 app.post('/api/manual-complete-payment', async (req, res) => {
     try {
