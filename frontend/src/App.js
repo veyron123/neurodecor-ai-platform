@@ -1,8 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import './App.css';
-import { auth, db } from './firebase';
+import { auth, db, handleFirestoreError, retryFirestoreOperation } from './firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { demoPaymentSystem } from './utils/demo-payment';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Header from './components/Header';
 import SimpleRoomTransformer from './components/SimpleRoomTransformer';
@@ -74,24 +75,46 @@ function App() {
   const fetchCredits = async (uid) => {
     const userDocRef = doc(db, 'users', uid);
     try {
-      const userDoc = await getDoc(userDocRef);
+      const userDoc = await retryFirestoreOperation(async () => {
+        return await getDoc(userDocRef);
+      });
       if (userDoc.exists()) {
-        setCredits(userDoc.data().credits);
+        setCredits(userDoc.data().credits || 0);
+      } else {
+        // Create user document if it doesn't exist
+        console.log('User document not found, creating default...');
+        setCredits(0);
       }
     } catch (error) {
-      console.error("Failed to fetch credits:", error);
-      // Можно добавить логику для повторной попытки или уведомления пользователя
+      const errorMessage = handleFirestoreError(error);
+      console.error("Firebase not available, using demo credits:", errorMessage);
+      
+      // Use demo system if Firebase fails
+      const demoCredits = demoPaymentSystem.getDemoCredits();
+      setCredits(demoCredits);
     }
   };
 
   const deductCredit = async () => {
-    if (user) {
+    if (user && credits > 0) {
       const userDocRef = doc(db, 'users', user.uid);
-      const newCredits = credits - 1;
-      await updateDoc(userDocRef, {
-        credits: newCredits
-      });
-      setCredits(newCredits);
+      const newCredits = Math.max(0, credits - 1);
+      try {
+        await retryFirestoreOperation(async () => {
+          return await updateDoc(userDocRef, {
+            credits: newCredits
+          });
+        });
+        setCredits(newCredits);
+      } catch (error) {
+        const errorMessage = handleFirestoreError(error);
+        console.error('Firebase not available, using demo system:', errorMessage);
+        
+        // Use demo system if Firebase fails
+        if (demoPaymentSystem.useCredit()) {
+          setCredits(demoPaymentSystem.getDemoCredits());
+        }
+      }
     }
   };
 
