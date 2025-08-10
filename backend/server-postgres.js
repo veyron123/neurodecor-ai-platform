@@ -481,6 +481,83 @@ app.post('/transform', auth.requireAuth, upload.single('image'), async (req, res
 
 // ========== DEBUG ENDPOINTS ==========
 
+// Manual payment processing endpoint (for debugging)
+app.post('/api/manual-complete-payment', async (req, res) => {
+    try {
+        const { orderReference } = req.body;
+        
+        if (!orderReference) {
+            return res.status(400).json({ error: 'Order reference required' });
+        }
+
+        // Find transaction
+        const transaction = await db.queryOne(
+            'SELECT * FROM transactions WHERE order_reference = $1',
+            [orderReference]
+        );
+
+        if (!transaction) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        if (transaction.status === 'completed') {
+            return res.status(400).json({ error: 'Transaction already completed' });
+        }
+
+        console.log('🔧 Manual payment processing:', orderReference);
+
+        // Use database transaction for atomicity
+        await db.transaction(async (client) => {
+            // Update transaction status
+            await client.query(
+                `UPDATE transactions 
+                 SET status = 'completed', updated_at = CURRENT_TIMESTAMP, callback_data = $1
+                 WHERE order_reference = $2`,
+                [JSON.stringify({ manual: true, timestamp: Date.now() }), orderReference]
+            );
+
+            // Add credits to user
+            await client.query(
+                `UPDATE users 
+                 SET credits = credits + $1, updated_at = CURRENT_TIMESTAMP 
+                 WHERE id = $2`,
+                [transaction.credits_added, transaction.user_id]
+            );
+        });
+
+        console.log('✅ Manual payment processed - Credits added:', transaction.credits_added, 'to user:', transaction.user_id);
+
+        res.json({
+            success: true,
+            orderReference,
+            creditsAdded: transaction.credits_added,
+            userId: transaction.user_id
+        });
+
+    } catch (error) {
+        console.error('❌ Manual payment processing error:', error);
+        res.status(500).json({ error: 'Failed to process payment' });
+    }
+});
+
+// List pending transactions endpoint
+app.get('/api/pending-transactions', async (req, res) => {
+    try {
+        const transactions = await db.query(
+            'SELECT * FROM transactions WHERE status = $1 ORDER BY created_at DESC',
+            ['pending']
+        );
+
+        res.json({
+            success: true,
+            transactions: transactions.rows
+        });
+    } catch (error) {
+        console.error('❌ Failed to get pending transactions:', error);
+        res.status(500).json({ error: 'Failed to get transactions' });
+    }
+});
+
 // Database health check
 app.get('/api/health', async (req, res) => {
     const dbHealth = await db.health();
