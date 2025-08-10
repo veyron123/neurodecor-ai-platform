@@ -1,5 +1,13 @@
 // Demo payment system while Firebase API is being enabled
 export const demoPaymentSystem = {
+  // Initialize demo system
+  init: () => {
+    if (!localStorage.getItem('demo_credits')) {
+      localStorage.setItem('demo_credits', '0');
+      localStorage.setItem('demo_initialized', 'true');
+      console.log('🎮 Demo payment system initialized with 0 credits');
+    }
+  },
   // Store demo credits in localStorage
   getDemoCredits: () => {
     return parseInt(localStorage.getItem('demo_credits') || '0');
@@ -43,5 +51,17 @@ export const demoPaymentSystem = {
       return true;
     }
     return false;
+  },
+
+  // Clear demo data (for switching to Firebase)
+  clearDemo: () => {
+    localStorage.removeItem('demo_credits');
+    localStorage.removeItem('demo_initialized');
+    console.log('🧹 Demo system cleared');
+  },
+
+  // Check if demo mode is active
+  isDemoActive: () => {
+    return demoPaymentSystem.getDemoCredits() > 0;
   }
 };

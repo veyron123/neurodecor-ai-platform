@@ -41,10 +41,15 @@ const SimpleRoomTransformer = ({ credits, deductCredit }) => {
     setError(null);
 
     try {
+      // Deduct credit BEFORE transformation (in case transformation fails)
+      await deductCredit();
+      console.log('💳 PRODUCTION: Credit deducted before transformation, remaining:', credits - 1);
+      
       const blob = await api.transformImage(selectedImage, roomType, furnitureStyle);
       setTransformedUrl(helpers.createImageUrl(blob));
-      deductCredit();
+      console.log('✅ PRODUCTION: Transformation successful');
     } catch (error) {
+      console.error('❌ PRODUCTION: Transformation failed:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);

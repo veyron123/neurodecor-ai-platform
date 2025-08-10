@@ -4,18 +4,25 @@ import { useTranslation } from 'react-i18next';
 import { products } from '../pricingData'; // Импортируем напрямую продукты
 import { auth } from '../firebase';
 import axios from 'axios';
-import { demoPaymentSystem } from '../utils/demo-payment';
 
-const Pricing = ({ onSubscribeClick }) => {
+const Pricing = ({ onSubscribeClick, onCreditsUpdate }) => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(null); // Будем хранить ID загружаемого плана
 
   const handlePurchase = async (product) => {
     const user = auth.currentUser;
-    if (!user) {
-      if (onSubscribeClick) onSubscribeClick();
-      return;
+    
+    // PRODUCTION MODE: Real payments only, require authentication
+    if (user) {
+      await handleRealPayment(user, product);
+    } else {
+      // Require login for real payments
+      alert('Пожалуйста, войдите в систему для покупки кредитов');
+      onSubscribeClick(); // Open login modal
     }
+  };
+
+  const handleRealPayment = async (user, product) => {
 
     setIsLoading(product.id);
     try {
@@ -43,23 +50,8 @@ const Pricing = ({ onSubscribeClick }) => {
       form.submit();
 
     } catch (error) {
-      console.error('Payment API not available, using demo system:', error);
-      
-      // Use demo payment system when API is not available
-      try {
-        const result = await demoPaymentSystem.simulatePayment(product.id);
-        if (result.success) {
-          alert(`✅ Демо-платеж успешен! Начислено ${result.creditsAdded} кредитов. 
-          
-🔄 Обновите страницу чтобы увидеть новый баланс.
-
-ℹ️ Это демо-режим пока настраивается Firebase API.`);
-          // Reload to refresh credits
-          window.location.reload();
-        }
-      } catch (demoError) {
-        alert('Ошибка демо-платежа. Попробуйте еще раз.');
-      }
+      console.error('❌ PRODUCTION ERROR: Payment failed:', error);
+      alert('❌ Ошибка платежа. Проверьте соединение и попробуйте снова. Если проблема повторяется, обратитесь в поддержку.');
     } finally {
       setIsLoading(null);
     }
