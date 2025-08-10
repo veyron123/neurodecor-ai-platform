@@ -244,7 +244,7 @@ app.post('/api/create-payment', auth.requireAuth, async (req, res) => {
 
     const orderReference = `WFP-${productId}-${userId}-${Date.now()}`;
     const orderDate = Math.floor(Date.now() / 1000);
-    const serviceUrl = NGROK_URL ? `${NGROK_URL}/api/payment-callback` : `${req.protocol}://${req.get('host')}/api/payment-callback`;
+    const serviceUrl = NGROK_URL ? `${NGROK_URL}/api/payment-callback` : `https://${req.get('host')}/api/payment-callback`;
 
     try {
         // Create pending transaction
@@ -532,13 +532,14 @@ app.post('/api/test-callback', async (req, res) => {
 // Debug Service URL generation
 app.get('/api/debug-service-url', (req, res) => {
     const { NGROK_URL } = process.env;
-    const serviceUrl = NGROK_URL ? `${NGROK_URL}/api/payment-callback` : `${req.protocol}://${req.get('host')}/api/payment-callback`;
+    const serviceUrl = NGROK_URL ? `${NGROK_URL}/api/payment-callback` : `https://${req.get('host')}/api/payment-callback`;
     
     console.log('🔍 DEBUG Service URL generation:');
     console.log('  NGROK_URL env var:', NGROK_URL || 'not set');
     console.log('  req.protocol:', req.protocol);
     console.log('  req.get("host"):', req.get('host'));
     console.log('  Final serviceUrl:', serviceUrl);
+    console.log('  🔧 FIXED: Using HTTPS instead of HTTP for callback URL');
     
     res.json({
         success: true,
@@ -546,7 +547,8 @@ app.get('/api/debug-service-url', (req, res) => {
         protocol: req.protocol,
         host: req.get('host'),
         finalServiceUrl: serviceUrl,
-        fullUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`
+        fullUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+        note: "Fixed: Using HTTPS for callback URL to ensure WayForPay can reach the endpoint"
     });
 });
 
