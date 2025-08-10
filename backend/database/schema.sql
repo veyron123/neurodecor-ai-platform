@@ -55,11 +55,13 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Add triggers for updated_at
+-- Add triggers for updated_at (safe for repeated runs)
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_transactions_updated_at ON transactions;
 CREATE TRIGGER update_transactions_updated_at 
     BEFORE UPDATE ON transactions 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
