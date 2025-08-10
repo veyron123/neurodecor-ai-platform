@@ -70,7 +70,7 @@ describe('API Tests', () => {
 
   describe('createPayment', () => {
     const userId = 'test-user-123';
-    const productId = 'prod_basic_8_credits';
+    const productId = 'prod_basic_10_credits';
 
     test('should make POST request with correct data', async () => {
       const mockResponse = { orderReference: 'test-order-ref' };

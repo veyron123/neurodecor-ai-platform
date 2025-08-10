@@ -42,7 +42,7 @@ if (process.env.FIREBASE_ADMIN_KEY) {
 
 // Products configuration
 const PRODUCTS = {
-  'prod_basic_8_credits': { name: 'Базовий', price: 1, credits: 8 },
+  'prod_basic_10_credits': { name: 'Базовий', price: 1, credits: 10 },
   'prod_standard_20_credits': { name: 'Стандарт', price: 1400, credits: 20 },
   'prod_prof_60_credits': { name: 'Професійний', price: 3200, credits: 60 }
 };

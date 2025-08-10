@@ -59,7 +59,7 @@ const Pricing = ({ onSubscribeClick }) => {
           <div key={plan.id} className={`pricing-card ${plan.id === 'prod_standard_20_credits' ? 'featured' : ''}`}>
             <div className="plan-name">{plan.name}</div>
             <div className="plan-price">
-              {plan.price} грн <span className="plan-period">{plan.id === 'prod_basic_8_credits' ? '/разовий платіж' : '/місяць'}</span>
+              {plan.price} грн <span className="plan-period">{plan.id === 'prod_basic_10_credits' ? '/разовий платіж' : '/місяць'}</span>
             </div>
             <div className="plan-photos">{plan.credits} кредитов</div>
             <ul className="plan-features">
@@ -74,7 +74,7 @@ const Pricing = ({ onSubscribeClick }) => {
               onClick={() => handlePurchase(plan)}
               disabled={isLoading === plan.id}
             >
-              {isLoading === plan.id ? 'Загрузка...' : (plan.id === 'prod_basic_8_credits' ? 'Сплатити зараз' : 'Підписатися зараз')}
+              {isLoading === plan.id ? 'Загрузка...' : (plan.id === 'prod_basic_10_credits' ? 'Сплатити зараз' : 'Підписатися зараз')}
             </button>
             <p className="refund-text">{t('refund_text')}</p>
           </div>

@@ -3,12 +3,12 @@
 
 export const products = [
   {
-    id: 'prod_basic_8_credits',
+    id: 'prod_basic_10_credits',
     name: 'Базовий',
     price: 1, // Цена в UAH
-    credits: 8,
+    credits: 10,
     features: [
-      "Віртуальне оформлення 6 кімнат",
+      "Віртуальне оформлення 10 кімнат",
       "Видалення меблів включено",
       "Без водяних знаків",
       "Разовий платіж",
@@ -50,9 +50,9 @@ export const getPricingData = (t) => {
   return products.map(p => ({
       ...p,
       price: `${p.price} грн`,
-      period: p.id === 'prod_basic_8_credits' ? '/разовий платіж' : '/місяць',
+      period: p.id === 'prod_basic_10_credits' ? '/разовий платіж' : '/місяць',
       photos: `${p.credits} кредитов`,
-      buttonText: p.id === 'prod_basic_8_credits' ? 'Сплатити зараз' : 'Підписатися зараз',
+      buttonText: p.id === 'prod_basic_10_credits' ? 'Сплатити зараз' : 'Підписатися зараз',
       isFeatured: p.id === 'prod_standard_20_credits'
   }));
 };
